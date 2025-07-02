@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker - Observability Demo</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <meta name="description" content="Interactive observability demo application">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">Worker Observability Demo</h1>
+            <p class="subtitle">Click anywhere to generate telemetry data</p>
+        </header>
+
+        <main class="main-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Clicks</h3>
+                    <span id="click-count">0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Session Duration</h3>
+                    <span id="session-time">00:00</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Cursor Position</h3>
+                    <span id="cursor-pos">0, 0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Page Views</h3>
+                    <span id="page-views">1</span>
+                </div>
+            </div>
+
+            <div class="interactive-area">
+                <div class="click-zones">
+                    <div class="zone zone-1" data-zone="primary">
+                        <h2>Primary Action Zone</h2>
+                        <p>High-priority interactions tracked here</p>
+                    </div>
+                    <div class="zone zone-2" data-zone="secondary">
+                        <h2>Secondary Action Zone</h2>
+                        <p>Standard user interactions</p>
+                    </div>
+                    <div class="zone zone-3" data-zone="tertiary">
+                        <h2>Tertiary Action Zone</h2>
+                        <p>Background activity monitoring</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="telemetry-status">
+                <div class="status-indicator">
+                    <div class="status-dot" id="telemetry-status"></div>
+                    <span>Telemetry Status: <span id="status-text">Connecting...</span></span>
+                </div>
+                <div class="last-event">
+                    <span>Last Event: <span id="last-event">None</span></span>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Powered by OpenTelemetry • Go • Grafana Stack</p>
+        </footer>
+    </div>
+
+    <!-- Floating particles for visual feedback -->
+    <div id="particles-container"></div>
+
+    <script src="/static/js/telemetry.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+version: "3.9"
+
+services:
+  # ---------- worker ----------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - UID=10001
+        - GID=10001
+    container_name: worker
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=worker
+      - OTEL_SERVICE_VERSION=v1.0.0
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_TRACES_EXPORTER=otlp
+      - LOG_LEVEL=info
+      - SERVER_ADDR=:8080
+      - SERVER_READ_TIMEOUT=15s
+      - SERVER_WRITE_TIMEOUT=15s
+      - SERVER_IDLE_TIMEOUT=60s
+      - SHUTDOWN_TIMEOUT=30s
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      otel-collector:
+        condition: service_started
+      prometheus:
+        condition: service_started
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ---------- collector ----------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.93.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Collector self-metrics
+      - "1888:1888"   # pprof
+      - "13133:13133" # health_check
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ---------- storage backends ----------
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./tempo.yml:/etc/tempo.yml
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "4319:4317"   # extra OTLP gRPC if you want direct ingest
+    networks:
+      - observability
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.1.0
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ---------- UI ----------
+  grafana:
+    image: grafana/grafana-enterprise:11.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - observability
+    restart: unless-stopped
+
+volumes:
+  grafana-storage:
+    driver: local
+
+networks:
+  observability:
+    driver: bridge
